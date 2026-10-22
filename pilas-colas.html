@@ -1,0 +1,995 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Pilas y colas en clase</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: presentación de aula en una sola página. Una diapositiva a la vez sobre papel cuadriculado de cuaderno; las diapositivas interactivas traen el simulador adentro; barra de navegación abajo, pensada para el clicker. Un solo look claro, a propósito, para el proyector. */
+:root {
+  --paper: #FBF8F1;
+  --grid-line: #ECE5D5;
+  --ink: #1D2B36;
+  --ink-soft: #4A5560;
+  --card: #FFFFFF;
+  --rule: #E0D8C6;
+  --orange: #F2994A;
+  --orange-deep: #B4501A;
+  --orange-tint: #FBE1C8;
+  --teal: #1B6F80;
+  --teal-mid: #4FA3B3;
+  --teal-tint: #D6ECEF;
+  --code-bg: #1D2B36;
+  --code-panel: #2B3A47;
+  --code-fg: #FBF8F1;
+  --code-dim: #8FA0AD;
+  --code-str: #F6C99D;
+  --code-soft: #C9D2D9;
+  --err: #FF9C8A;
+  --err-tint: #FDE3DD;
+  --err-ink: #9B2C1A;
+  --font-text: "Atkinson Hyperlegible", Verdana, sans-serif;
+  --font-code: "IBM Plex Mono", "Courier New", monospace;
+  --bar-h: 64px;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 32px 32px;
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: clamp(18px, 1.6vw, 26px);
+  line-height: 1.4;
+  overflow: hidden;
+}
+.deck { height: calc(100% - var(--bar-h) - env(safe-area-inset-bottom, 0px)); overflow-y: auto; }
+.slide {
+  display: none; flex-direction: column; gap: clamp(16px, 2.4vh, 32px);
+  min-height: 100%; max-width: 1500px; margin: 0 auto;
+  padding-block: clamp(20px, 4vh, 56px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px), 4vw);
+  padding-right: max(16px, env(safe-area-inset-right, 0px), 4vw);
+}
+.slide.on { display: flex; }
+.slide.dark { max-width: none; background: var(--code-bg); color: var(--code-fg); }
+.slide.dark > * { width: 100%; max-width: 1400px; margin-inline: auto; }
+.slide.center { justify-content: center; }
+.eyebrow { font-size: clamp(14px, 1.1vw, 18px); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--orange-deep); }
+.dark .eyebrow { color: var(--orange); }
+h1, h2, h3 { margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(52px, 8vw, 128px); line-height: 1.02; }
+h2 { font-size: clamp(34px, 4.2vw, 66px); line-height: 1.08; }
+h3 { font-size: clamp(24px, 2.4vw, 38px); line-height: 1.15; }
+p { margin: 0; }
+.lead { font-size: clamp(24px, 2.6vw, 42px); line-height: 1.25; max-width: 32ch; }
+.soft { color: var(--ink-soft); }
+.dark .soft { color: var(--code-soft); }
+.head { display: flex; flex-direction: column; gap: 6px; }
+code, .mono { font-family: var(--font-code); }
+.row2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(16px, 2vw, 32px); }
+.row3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2vw, 32px); }
+.card { background: var(--card); border: 2px solid var(--rule); border-radius: 18px; padding: clamp(18px, 2vw, 36px); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.card.pila-c { background: var(--orange-tint); border-color: var(--orange); }
+.card.cola-c { background: var(--teal-tint); border-color: var(--teal-mid); }
+.card.pila-c h3 { color: var(--orange-deep); }
+.card.cola-c h3 { color: var(--teal); }
+.card.night { background: var(--code-panel); border-color: var(--code-panel); color: var(--code-fg); }
+.pill { align-self: flex-start; font-size: clamp(15px, 1.2vw, 20px); font-weight: 700; padding: 6px 16px; border-radius: 999px; }
+.pill.pila-p { background: var(--orange-tint); color: var(--orange-deep); border: 2px solid var(--orange); }
+.pill.cola-p { background: var(--teal-tint); color: var(--teal); border: 2px solid var(--teal-mid); }
+ul.clean { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; }
+.big-num { font-size: clamp(40px, 4vw, 64px); font-weight: 700; color: var(--orange-deep); line-height: 1; }
+.big-num.t { color: var(--teal); }
+.foot { margin-top: auto; font-size: clamp(15px, 1.1vw, 18px); color: var(--ink-soft); }
+.dark .foot { color: var(--code-soft); }
+.btn-reveal { align-self: flex-start; font: 700 clamp(16px, 1.2vw, 20px) var(--font-text); color: var(--ink); background: var(--orange); border: 2px solid var(--orange); border-radius: 10px; padding: 8px 18px; cursor: pointer; }
+.btn-reveal:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.answer { font-weight: 700; }
+.answer[hidden] { display: none !important; }
+
+/* Portada */
+.cover { justify-content: center; position: relative; }
+.cover .stack-deco { position: absolute; right: 4vw; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 10px; }
+.cover .stack-deco div { width: clamp(120px, 18vw, 300px); height: clamp(36px, 6vh, 78px); border-radius: 14px; }
+@media (max-width: 760px) { .cover .stack-deco { display: none; } }
+
+/* Ilustraciones de las diapositivas */
+.tower-ill { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.ill-row { display: flex; gap: 18px; align-items: center; }
+.ill-plate { width: clamp(150px, 16vw, 260px); height: clamp(48px, 7vh, 80px); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: clamp(20px, 2vw, 30px); }
+.queue-ill { display: flex; gap: 12px; flex-wrap: wrap; }
+.ill-person { width: clamp(96px, 9vw, 150px); aspect-ratio: 1; max-width: 100%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: clamp(18px, 1.7vw, 26px); }
+.ill-note { font-size: clamp(16px, 1.3vw, 21px); font-weight: 700; }
+
+/* Código en diapositivas */
+.codebox { background: var(--card); border: 2px solid var(--rule); border-radius: 16px; padding: clamp(16px, 1.8vw, 30px); min-width: 0; overflow-x: auto; }
+.codebox .lbl, .outbox .lbl { font-size: clamp(13px, 1vw, 16px); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); margin-bottom: 8px; }
+.codebox pre, .outbox pre { margin: 0; font-family: var(--font-code); font-size: clamp(16px, 1.55vw, 26px); line-height: 1.6; white-space: pre; }
+.codebox .cm { color: #6B6255; }
+.codebox .st { color: #A3420B; }
+.outbox { background: var(--code-bg); color: var(--code-fg); border-radius: 16px; padding: clamp(16px, 1.8vw, 30px); min-width: 0; overflow-x: auto; display: flex; flex-direction: column; gap: 12px; }
+.outbox .lbl { color: var(--code-dim); margin: 0; }
+.codegrid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: clamp(16px, 2vw, 28px); align-items: start; }
+
+/* Tabla */
+.tablewrap { overflow-x: auto; }
+table.cmp { border-collapse: collapse; width: 100%; font-size: clamp(18px, 1.7vw, 28px); background: var(--card); border-radius: 14px; overflow: hidden; }
+table.cmp th, table.cmp td { text-align: left; padding: 12px 18px; border-bottom: 2px solid var(--rule); }
+table.cmp th { font-size: clamp(20px, 1.9vw, 30px); }
+table.cmp tr:nth-child(even) td { background: #F6F1E6; }
+table.cmp td.code { font-family: var(--font-code); font-size: 0.92em; }
+table.cmp .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Reto: aviso, reloj y votación */
+.alert { background: var(--err-tint); border: 3px solid var(--err-ink); color: var(--err-ink); border-radius: 14px; padding: 14px 20px; font-size: clamp(18px, 1.7vw, 28px); line-height: 1.35; }
+.alert b { color: var(--err-ink); }
+.timer { font-family: var(--font-code); font-weight: 600; font-size: clamp(96px, 18vw, 260px); line-height: 1; text-align: center; font-variant-numeric: tabular-nums; color: var(--ink); }
+.timer.low { color: var(--orange-deep); }
+.timer.done { color: var(--err-ink); }
+.timer-ctl { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
+.tally { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 14px; }
+.team { background: var(--card); border: 2px solid var(--rule); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.team.ok { border-color: var(--teal-mid); }
+.team.win { border-color: var(--orange); background: var(--orange-tint); }
+.team input[type="text"] { font: 700 18px var(--font-text); color: var(--ink); background: transparent; border: 0; border-bottom: 2px dashed var(--rule); padding: 2px 0; width: 100%; min-width: 0; }
+.team input[type="text"]:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.team .cumple { display: flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; }
+.team .cumple input { width: 20px; height: 20px; accent-color: var(--teal); }
+.team .votes { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.team .votes b { font-family: var(--font-code); font-size: 40px; font-variant-numeric: tabular-nums; }
+.team .votes button { font: 700 22px var(--font-text); width: 46px; height: 46px; border-radius: 10px; border: 2px solid var(--rule); background: var(--paper); color: var(--ink); cursor: pointer; }
+.team .votes button:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.team .badge { font-size: 14px; font-weight: 700; color: var(--orange-deep); min-height: 1.2em; }
+
+/* Barra */
+.bar { position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px)); background: var(--card); border-top: 2px solid var(--rule); display: flex; align-items: center; gap: 10px; z-index: 20; }
+.nav { font: 700 16px var(--font-text); color: var(--ink); background: var(--paper); border: 2px solid var(--rule); border-radius: 10px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
+.nav.primary { background: var(--orange); border-color: var(--orange); }
+.nav:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.nav[aria-pressed="true"] { background: var(--ink); color: var(--code-fg); border-color: var(--ink); }
+.bar .where { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.bar .where b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar .where span { font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+.progress { position: fixed; left: 0; bottom: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px)); height: 4px; background: var(--orange); z-index: 21; transition: width 0.25s; }
+@media (max-width: 640px) { .hide-sm { display: none; } .row2, .row3, .codegrid { grid-template-columns: minmax(0, 1fr); } }
+
+/* ===== Simulador ===== */
+.sim { display: flex; flex-direction: column; gap: 14px; font-size: 18px; }
+.sim .main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.sim .col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.stage { background: var(--card); border: 2px solid var(--rule); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.panel { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.panel-title { font-size: 22px; font-weight: 700; }
+.panel-title small { font-size: 16px; font-weight: 400; color: var(--ink-soft); }
+.rule-pill { font-size: 14px; font-weight: 700; letter-spacing: 0.06em; padding: 4px 12px; border-radius: 999px; }
+.pila .rule-pill { background: var(--orange-tint); color: var(--orange-deep); }
+.cola .rule-pill { background: var(--teal-tint); color: var(--teal); }
+.repr { font-family: var(--font-code); font-size: 17px; color: var(--ink-soft); overflow-x: auto; white-space: nowrap; padding-bottom: 2px; }
+.repr b { color: var(--ink); font-weight: 600; }
+.tower-area { display: flex; justify-content: center; align-items: flex-end; gap: 16px; min-height: 400px; }
+.tower { display: flex; flex-direction: column-reverse; gap: 6px; width: min(300px, 62vw); }
+.tower-base { height: 8px; border-radius: 4px; background: var(--ink); width: min(330px, 68vw); margin-top: 2px; align-self: center; }
+.tower-wrap { display: flex; flex-direction: column; align-items: center; }
+.plate { position: relative; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 19px; color: var(--ink); background: var(--orange-tint); border: 3px solid var(--orange); }
+.plate.top { background: var(--orange); }
+.plate .idx { position: absolute; left: 10px; font-family: var(--font-code); font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.plate.top .idx { color: var(--ink); }
+.tower-side { display: flex; flex-direction: column; justify-content: space-between; align-self: stretch; font-size: 15px; color: var(--ink-soft); padding-block: 4px 18px; width: 120px; }
+.tower-side .door { font-weight: 700; color: var(--orange-deep); }
+.empty-note { font-size: 16px; color: var(--ink-soft); text-align: center; padding: 12px; }
+.queue-area { display: flex; flex-direction: column; gap: 8px; }
+.queue-track { display: flex; gap: 8px; align-items: stretch; overflow-x: auto; padding: 14px 4px 6px; min-height: 116px; }
+.person { position: relative; flex: 0 0 auto; width: 100px; height: 88px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; background: var(--teal-tint); border: 3px solid var(--teal-mid); font-weight: 700; font-size: 18px; color: var(--ink); text-align: center; padding: 4px; overflow-wrap: anywhere; }
+.person.front { background: var(--teal); border-color: var(--teal); color: var(--code-fg); }
+.person .idx { font-family: var(--font-code); font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.person.front .idx { color: var(--teal-tint); }
+.queue-ends { display: flex; justify-content: space-between; font-size: 15px; color: var(--ink-soft); gap: 12px; }
+.queue-ends .door { font-weight: 700; color: var(--teal); }
+.peek { outline: 4px dashed var(--ink); outline-offset: 3px; }
+.in-pila { animation: dropIn 0.38s ease-out; }
+.in-cola { animation: slideIn 0.38s ease-out; }
+.out-pila { animation: liftOut 0.38s ease-in forwards; }
+.out-cola { animation: walkOut 0.38s ease-in forwards; }
+.out-fade { animation: fadeAway 0.38s ease-in forwards; }
+@keyframes dropIn { from { transform: translateY(-60px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes slideIn { from { transform: translateX(60px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes liftOut { to { transform: translateY(-70px); opacity: 0; } }
+@keyframes walkOut { to { transform: translateX(-80px); opacity: 0; } }
+@keyframes fadeAway { to { transform: translate(-30px, -20px); opacity: 0; } }
+.console { background: var(--code-bg); color: var(--code-fg); border-radius: 14px; padding: 12px 0 14px; font-family: var(--font-code); font-size: clamp(15px, 1.3vw, 19px); line-height: 1.6; height: 320px; overflow: auto; }
+.console .lbl { color: var(--code-dim); font-family: var(--font-text); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; padding: 0 18px 6px; }
+.cl { white-space: pre; padding: 0 18px; border-left: 6px solid transparent; }
+.cl .pr { color: var(--code-dim); user-select: none; }
+.cl.out { color: var(--code-str); }
+.cl.err { color: var(--err); }
+.cl.last { border-left-color: var(--orange); background: #2F4252; }
+.note { background: var(--card); border: 2px solid var(--rule); border-radius: 12px; padding: 12px 16px; font-size: clamp(17px, 1.5vw, 22px); min-height: 4.2em; display: flex; align-items: center; }
+.note.ask { background: var(--orange-tint); border-color: var(--orange); font-weight: 700; }
+.note.bad { background: var(--err-tint); border-color: var(--err); color: var(--err-ink); }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; background: var(--card); border: 2px solid var(--rule); border-radius: 14px; padding: 10px 12px; }
+.add { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.add label { font-size: 15px; color: var(--ink-soft); }
+#name { font: 400 18px var(--font-text); color: var(--ink); background: var(--paper); border: 2px solid var(--rule); border-radius: 10px; padding: 8px 12px; width: 140px; }
+#name:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.btn { font: 700 16px var(--font-text); color: var(--ink); background: var(--paper); border: 2px solid var(--rule); border-radius: 10px; padding: 9px 14px; cursor: pointer; }
+.btn .code { font-family: var(--font-code); font-weight: 600; font-size: 14px; }
+.btn.primary { background: var(--orange); border-color: var(--orange); }
+.btn.teal { background: var(--teal); border-color: var(--teal); color: var(--code-fg); }
+.btn:hover { border-color: var(--ink-soft); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+.sep { width: 2px; align-self: stretch; background: var(--rule); }
+.toggle { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; cursor: pointer; }
+.toggle input { width: 20px; height: 20px; accent-color: var(--orange-deep); }
+.spacer { flex: 1; }
+.keys { font-size: 14px; color: var(--ink-soft); }
+kbd { font-family: var(--font-code); font-size: 13px; background: var(--card); border: 1px solid var(--rule); border-radius: 4px; padding: 1px 5px; }
+.scene { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.scene-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 22px; align-items: end; }
+.scene-title { font-size: 22px; font-weight: 700; }
+.scene-title small { display: block; font-size: 16px; font-weight: 400; color: var(--ink-soft); }
+.kitchen { display: flex; flex-direction: column; align-items: center; min-height: 340px; justify-content: flex-end; }
+.dishes { display: flex; flex-direction: column-reverse; gap: 4px; align-items: center; }
+.dish { width: min(220px, 70vw); height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.14), inset 0 0 0 6px rgba(255, 255, 255, 0.45); }
+.counter { width: min(260px, 80vw); height: 14px; border-radius: 4px; background: #8A6A4A; margin-top: 4px; }
+.street { display: flex; align-items: flex-end; gap: 10px; min-height: 220px; overflow-x: auto; padding: 8px 4px 6px; }
+.stand { flex: 0 0 auto; width: 104px; height: 170px; border-radius: 10px 10px 4px 4px; background: var(--card); border: 3px solid var(--ink); display: flex; flex-direction: column; overflow: hidden; }
+.stand .awning { height: 34px; background: repeating-linear-gradient(90deg, var(--orange) 0 14px, var(--paper) 14px 28px); border-bottom: 3px solid var(--ink); }
+.stand .sign { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; text-align: center; padding: 4px; }
+.cust { flex: 0 0 auto; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.cust .head { width: 34px; height: 34px; border-radius: 50%; background: #E9C29B; border: 3px solid var(--ink); }
+.cust .torso { width: 58px; height: 62px; border-radius: 26px 26px 6px 6px; border: 3px solid var(--ink); }
+.cust .tag { font-size: 15px; font-weight: 700; max-width: 74px; overflow-wrap: anywhere; text-align: center; }
+.cust.first .tag { color: var(--teal); }
+.cust.first .head { box-shadow: 0 0 0 4px var(--teal-mid); }
+.story { background: var(--card); border: 2px solid var(--rule); border-radius: 14px; padding: 12px 18px; height: 320px; overflow: auto; }
+.story .lbl { color: var(--ink-soft); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; font-weight: 700; }
+.story ol { margin: 0; padding-left: 26px; display: flex; flex-direction: column; gap: 4px; font-size: 17px; }
+.story li.last { font-weight: 700; }
+@media (max-width: 900px) { .sim .main { grid-template-columns: minmax(0, 1fr); } .console, .story { height: 240px; } }
+@media (max-width: 760px) { .scene-row { grid-template-columns: minmax(0, 1fr); } .kitchen { min-height: 280px; } }
+@media (max-width: 520px) { .tower-side { width: 84px; font-size: 13px; } .tower-area { min-height: 360px; } .sep { display: none; } }
+@media (prefers-reduced-motion: reduce) { .in-pila, .in-cola, .out-pila, .out-cola, .out-fade { animation: none; } .progress { transition: none; } }
+</style>
+
+<main class="deck" id="deck">
+
+<section class="slide cover" data-title="Portada">
+  <div class="stack-deco" aria-hidden="true">
+    <div style="background:#F2994A"></div><div style="background:#E07A2E"></div><div style="background:#B4501A"></div><div style="background:#7E3A12"></div>
+  </div>
+  <div class="eyebrow">Programación I · V2213</div>
+  <h1>Pilas y colas</h1>
+</section>
+
+<section class="slide" data-title="Un solo concepto">
+  <div class="head"><div class="eyebrow">Hoy</div><h2>Un solo concepto nuevo</h2></div>
+  <p class="lead">Pilas y colas guardan cosas en orden, con una <b>regla para sacar</b>.</p>
+  <div class="row2">
+    <div class="card pila-c"><h3>Pila</h3><p>Sale el <b>último</b> que entró.</p></div>
+    <div class="card cola-c"><h3>Cola</h3><p>Sale el <b>primero</b> que entró.</p></div>
+  </div>
+  <p class="soft">Primero lo vemos en la vida real. Después, en Python.</p>
+</section>
+
+<section class="slide" data-title="La pila">
+  <div class="row2" style="align-items:center">
+    <div class="head" style="gap:16px">
+      <div class="eyebrow">Estructura 1</div>
+      <h2>La pila</h2>
+      <p class="lead">Último en entrar, primero en salir.</p>
+      <span class="pill pila-p">LIFO · Last In, First Out</span>
+      <p><b>La usas cuando…</b></p>
+      <ul class="clean soft">
+        <li>Presionas Ctrl + Z para deshacer</li>
+        <li>Regresas con el botón «atrás» del navegador</li>
+        <li>Tomas el plato de arriba de la pila</li>
+      </ul>
+    </div>
+    <div class="tower-ill" aria-label="Pila de cuatro platos: el plato 4 está arriba">
+      <div class="ill-row"><div class="ill-plate" style="background:#F2994A">plato 4</div><span class="ill-note" style="color:var(--orange-deep)">Entró al último: sale primero</span></div>
+      <div class="ill-row"><div class="ill-plate" style="background:#E8A46A">plato 3</div></div>
+      <div class="ill-row"><div class="ill-plate" style="background:#F2C49A">plato 2</div></div>
+      <div class="ill-row"><div class="ill-plate" style="background:#FBE1C8">plato 1</div><span class="ill-note soft">Entró primero: sale al final</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="La cola">
+  <div class="row2" style="align-items:center">
+    <div class="head" style="gap:16px">
+      <div class="eyebrow">Estructura 2</div>
+      <h2>La cola</h2>
+      <p class="lead">Primero en entrar, primero en salir.</p>
+      <span class="pill cola-p">FIFO · First In, First Out</span>
+      <p><b>La usas cuando…</b></p>
+      <ul class="clean soft">
+        <li>Haces fila en la tortillería</li>
+        <li>Mandas varios documentos a la impresora</li>
+        <li>Esperas tu turno en una ventanilla</li>
+      </ul>
+    </div>
+    <div class="head" style="gap:12px" aria-label="Fila de cuatro personas: Ana al frente">
+      <div class="queue-ill">
+        <div class="ill-person" style="background:#1B6F80;color:#FBF8F1">Ana</div>
+        <div class="ill-person" style="background:#4FA3B3;color:#1D2B36">Luis</div>
+        <div class="ill-person" style="background:#9FCFD8;color:#1D2B36">Sofía</div>
+        <div class="ill-person" style="background:#D6ECEF;color:#1D2B36">Diego</div>
+      </div>
+      <div class="ill-row" style="justify-content:space-between"><span class="ill-note" style="color:var(--teal)">← Sale: llegó primero</span><span class="ill-note soft">Entra al final ←</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="slide" data-title="Paso 1 · Vida real" data-sim="vida">
+  <div class="head"><div class="eyebrow">Paso 1 · Vida real</div><h2>Platos y tortillería</h2></div>
+  <div class="sim-slot"></div>
+</section>
+
+<section class="slide" data-title="La pila en Python">
+  <div class="head"><div class="eyebrow">Paso 2 · Ahora en Python</div><h2>La pila en Python</h2></div>
+  <div class="codegrid">
+    <div class="codebox"><div class="lbl">Código</div><pre>historial = []
+historial.append(<span class="st">"escribir hola"</span>)  <span class="cm"># apilar</span>
+historial.append(<span class="st">"poner negritas"</span>)
+historial.append(<span class="st">"borrar palabra"</span>)
+print(historial[-1])     <span class="cm"># ver la de arriba</span>
+print(historial.pop())   <span class="cm"># sacar la de arriba</span>
+print(historial)
+print(len(historial) == 0)  <span class="cm"># ¿está vacía?</span></pre></div>
+    <div class="outbox"><div class="lbl">Salida</div>
+      <button class="btn-reveal" type="button" data-reveal="out-pila">Mostrar salida</button>
+      <pre id="out-pila" class="answer" hidden>borrar palabra
+borrar palabra
+['escribir hola', 'poner negritas']
+False</pre></div>
+  </div>
+  <p class="soft"><b>[-1]</b> mira el último sin quitarlo · <b>pop()</b> lo quita y lo regresa · <b>len(lista) == 0</b> pregunta si está vacía</p>
+</section>
+
+<section class="slide" data-title="Paso 2 · Pila en vivo" data-sim="pila">
+  <div class="head"><div class="eyebrow">Paso 2 · Pila en vivo</div><h2>La pila con su consola</h2></div>
+  <div class="sim-slot"></div>
+</section>
+
+<section class="slide" data-title="La cola en Python">
+  <div class="head"><div class="eyebrow">Paso 3 · Ahora en Python</div><h2>La cola en Python</h2></div>
+  <div class="codegrid">
+    <div class="codebox"><div class="lbl">Código</div><pre>fila = []
+fila.append(<span class="st">"Ana"</span>)    <span class="cm"># llega Ana</span>
+fila.append(<span class="st">"Luis"</span>)
+fila.append(<span class="st">"Sofía"</span>)
+print(fila[0])         <span class="cm"># ¿quién sigue?</span>
+print(fila.pop(0))     <span class="cm"># atender al primero</span>
+print(fila)
+print(len(fila) == 0)  <span class="cm"># ¿está vacía?</span></pre></div>
+    <div class="outbox"><div class="lbl">Salida</div>
+      <button class="btn-reveal" type="button" data-reveal="out-cola">Mostrar salida</button>
+      <pre id="out-cola" class="answer" hidden>Ana
+Ana
+['Luis', 'Sofía']
+False</pre></div>
+  </div>
+  <p class="soft"><b>[0]</b> mira al primero sin quitarlo · <b>pop(0)</b> lo quita y lo regresa · el <b>0</b> es la posición del primero</p>
+</section>
+
+<section class="slide" data-title="Paso 3 · Cola en vivo" data-sim="cola">
+  <div class="head"><div class="eyebrow">Paso 3 · Cola en vivo</div><h2>La cola con su consola</h2></div>
+  <div class="sim-slot"></div>
+</section>
+
+<section class="slide" data-title="Lado a lado">
+  <div class="head"><div class="eyebrow">Resumen</div><h2>Pila y cola, lado a lado</h2></div>
+  <div class="tablewrap">
+    <table class="cmp">
+      <tr><th></th><th style="color:var(--orange-deep)">Pila</th><th style="color:var(--teal)">Cola</th></tr>
+      <tr><td>Regla</td><td>Sale el último que entró</td><td>Sale el primero que entró</td></tr>
+      <tr><td>Se parece a</td><td>Una pila de platos</td><td>La fila de la tortillería</td></tr>
+      <tr><td>Agregar</td><td class="code">lista.append(x)</td><td class="code">lista.append(x)</td></tr>
+      <tr><td>Sacar</td><td class="code">lista.pop()</td><td class="code">lista.pop(0)</td></tr>
+      <tr><td>Ver sin sacar</td><td class="code">lista[-1]</td><td class="code">lista[0]</td></tr>
+      <tr><td>¿Está vacía?</td><td class="code">len(lista) == 0</td><td class="code">len(lista) == 0</td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="slide dark" data-title="Un solo número">
+  <div class="head"><div class="eyebrow">Ojo</div><h2>Un solo número cambia todo</h2></div>
+  <p class="mono" style="font-size:clamp(20px,2vw,32px)">fila = ["Ana", "Luis", "Sofía"]</p>
+  <div class="row2">
+    <div class="card night"><p class="mono" style="font-size:clamp(26px,2.8vw,44px);font-weight:600">fila.pop()</p><p class="soft">¿Qué regresa? Predice antes de ver.</p>
+      <button class="btn-reveal" type="button" data-reveal="ans-pop">Revelar</button>
+      <p id="ans-pop" class="answer" hidden style="color:var(--orange);font-size:clamp(24px,2.4vw,38px)">Sofía: la trató como pila</p></div>
+    <div class="card night"><p class="mono" style="font-size:clamp(26px,2.8vw,44px);font-weight:600">fila.pop(0)</p><p class="soft">¿Qué regresa? Predice antes de ver.</p>
+      <button class="btn-reveal" type="button" data-reveal="ans-pop0">Revelar</button>
+      <p id="ans-pop0" class="answer" hidden style="color:#9FD3DC;font-size:clamp(24px,2.4vw,38px)">Ana: así atiende una cola</p></div>
+  </div>
+  <p class="soft">Las dos líneas corren sin error. Que corra no significa que haga lo que pediste: compara con lo que debía salir.</p>
+</section>
+
+<section class="slide" data-title="Paso 4 · Comparar" data-sim="comparar">
+  <div class="head"><div class="eyebrow">Paso 4 · Comparar</div><h2>Misma lista, distinto pop</h2></div>
+  <div class="sim-slot"></div>
+</section>
+
+<section class="slide" data-title="En la tecnología">
+  <div class="head"><div class="eyebrow">¿Para qué sirve?</div><h2>Dónde vive en la tecnología</h2></div>
+  <div class="row2">
+    <div class="card pila-c"><h3>Pila</h3>
+      <p><b>El Traceback de Python.</b> <span class="soft">Cuando una función llama a otra, Python las apila para saber a dónde regresar. Por eso el error dice «most recent call last».</span></p>
+      <p><b>Deshacer y «atrás».</b> <span class="soft">Word, Photoshop y el navegador guardan tus pasos en una pila.</span></p></div>
+    <div class="card cola-c"><h3>Cola</h3>
+      <p><b>La fila de reproducción.</b> <span class="soft">«Agregar a la fila» en Spotify o YouTube: suena primero lo que agregaste primero.</span></p>
+      <p><b>Un servidor web.</b> <span class="soft">Cuando miles entran a una página, el servidor atiende las peticiones en orden de llegada.</span></p></div>
+  </div>
+</section>
+
+<section class="slide dark" data-title="En ciberseguridad">
+  <div class="head"><div class="eyebrow">En tu carrera</div><h2>¿Y en ciberseguridad?</h2></div>
+  <div class="row2">
+    <div class="card night"><span class="pill cola-p">Cola</span><h3>Denegación de servicio</h3>
+      <p class="soft">Un atacante manda miles de peticiones falsas para llenar la fila del servidor. Los usuarios reales ya no alcanzan turno.</p>
+      <p class="soft">Es como formar 500 clientes falsos en la tortillería. <b style="color:var(--code-fg)">Defensa:</b> limitar cuántas peticiones hace cada quien por minuto.</p></div>
+    <div class="card night"><span class="pill pila-p">Pila</span><h3>Desbordamiento de pila</h3>
+      <p class="soft">En lenguajes como C, si un programa escribe más datos de los que caben, puede pisar el dato que dice a dónde regresar.</p>
+      <p class="soft">Un atacante lo aprovecha para cambiar a dónde salta el programa. Es una de las fallas más antiguas y famosas.</p></div>
+  </div>
+</section>
+
+<section class="slide" data-title="¿Pila o cola?">
+  <div class="head"><div class="eyebrow">Calentamiento</div><h2>¿Pila o cola?</h2><p class="soft">Decide y explica por qué en una frase.</p></div>
+  <div class="row3">
+    <div class="card"><span class="big-num" style="color:var(--ink-soft)">1</span><h3>Presionar Ctrl + Z en Word</h3><p id="r1" class="answer" hidden style="color:var(--orange-deep)">Pila: deshace la última acción.</p></div>
+    <div class="card"><span class="big-num" style="color:var(--ink-soft)">2</span><h3>Personas esperando el camión</h3><p id="r2" class="answer" hidden style="color:var(--teal)">Cola: sube primero quien llegó primero.</p></div>
+    <div class="card"><span class="big-num" style="color:var(--ink-soft)">3</span><h3>Reabrir la última pestaña que cerraste</h3><p id="r3" class="answer" hidden style="color:var(--orange-deep)">Pila: Ctrl + Shift + T reabre la última, luego la anterior.</p></div>
+  </div>
+  <button class="btn-reveal" type="button" data-reveal="r1 r2 r3">Revelar respuestas</button>
+</section>
+
+<section class="slide" data-title="Reto: vibecodea">
+  <div class="head"><div class="eyebrow">Reto · Ejercicio de clase</div><h2>Vibecodea con pilas o colas</h2></div>
+  <div class="alert" role="note"><b>Este reto SÍ se califica.</b> Cuenta como ejercicio de clase: entregado vale 100. Si la liga no llega al grupo de WhatsApp antes de que termine la clase, es 0.</div>
+  <div class="row2">
+    <div class="card"><h3>Cómo</h3>
+      <ol class="clean">
+        <li>Equipos de 2 o 3, con un celular.</li>
+        <li>Abran Colab con su cuenta de la universidad.</li>
+        <li>Escojan un tema (siguiente diapositiva) y escriban <b>su propio prompt</b> para Gemini.</li>
+        <li>Prueben, lean los errores y pidan cambios hasta que funcione.</li>
+        <li>Compartan y manden la liga al grupo.</li>
+      </ol>
+      <p class="mono" style="background:var(--paper);border:2px solid var(--rule);border-radius:10px;padding:12px 14px;font-size:clamp(15px,1.3vw,20px);overflow-wrap:anywhere">Equipo: [nombres completos]<br>Tema: [su tema]<br>[liga de Colab]</p>
+    </div>
+    <div class="card cola-c"><h3>Para pedirle a la IA</h3>
+      <ul class="clean">
+        <li><b>Qué quieren:</b> el problema y si es pila o cola.</li>
+        <li><b>Con qué:</b> listas, funciones e if, como en clase.</li>
+        <li><b>Qué no:</b> sin clases ni librerías que no conozcan.</li>
+        <li><b>Cómo saber que funciona:</b> pidan pruebas que digan qué debe imprimir cada una.</li>
+      </ul>
+      <h3>Para iterar</h3>
+      <ul class="clean">
+        <li>Córranlo. Si falla, lean el error antes de pedir ayuda.</li>
+        <li>Pidan un cambio a la vez y vuelvan a probar.</li>
+      </ul></div>
+  </div>
+</section>
+
+<section class="slide" data-title="Temas del reto">
+  <div class="head"><div class="eyebrow">Escojan uno</div><h2>De tu carrera o de tu día</h2></div>
+  <div class="row3">
+    <div class="card cola-c"><span class="pill cola-p">Cola · Vida diaria</span><h3>Fila de Spotify</h3><p class="soft">«Agregar a la fila»: las canciones suenan en el orden en que las agregaste. Muestra cuál suena y cuáles siguen.</p></div>
+    <div class="card cola-c"><span class="pill cola-p">Cola · Ciberseguridad</span><h3>Intentos de inicio de sesión</h3><p class="soft">Guarda los últimos 5 intentos; cuando llega uno nuevo, sale el más viejo. Si los 3 más recientes fallaron, avisa «cuenta bloqueada».</p></div>
+    <div class="card cola-c"><span class="pill cola-p">Cola · Ciberseguridad</span><h3>Antivirus en espera</h3><p class="soft">Los archivos descargados se forman para revisarse en orden de llegada. Muestra cuál se revisa y cuántos faltan.</p></div>
+    <div class="card pila-c"><span class="pill pila-p">Pila · Vida diaria</span><h3>Botón «atrás» del navegador</h3><p class="soft">Cada página que visitas se apila; «atrás» te regresa a la anterior.</p></div>
+    <div class="card pila-c"><span class="pill pila-p">Pila · Vida diaria</span><h3>Deshacer en una app de dibujo</h3><p class="soft">Cada trazo se apila; deshacer quita el último y rehacer lo regresa.</p></div>
+    <div class="card pila-c"><span class="pill pila-p">Pila · Ciberseguridad</span><h3>Historial de comandos</h3><p class="soft">Los comandos que escribes en la terminal se apilan; la flecha hacia arriba te muestra primero el último.</p></div>
+  </div>
+  <p><b>¿Otra idea?</b> Propónganla, siempre con pila o cola. <span class="soft">Usen datos inventados: nada de contraseñas ni correos reales.</span></p>
+</section>
+
+<section class="slide" data-title="Cómo se califica">
+  <div class="head"><div class="eyebrow">Léelo bien</div><h2>Cómo se califica</h2></div>
+  <div class="row2">
+    <div class="card pila-c"><h3>Ejercicio de clase</h3>
+      <p>Cuenta como <b>entregado</b> si:</p>
+      <ul class="clean">
+        <li>La liga llega al grupo de WhatsApp <b>antes de que termine la clase</b>.</li>
+        <li>La liga abre: está compartida con cualquier persona que tenga el enlace.</li>
+        <li>Además de la liga incluir en el mensaje los nombres completos de todo el equipo.</li>
+        <li>El notebook tiene su programa.</li>
+      </ul>
+      <p><b>Solo cuentan los nombres escritos en el mensaje del grupo.</b> Si tu nombre no está, no tienes entrega.</p></div>
+    <div class="card cola-c"><h3>Punto extra</h3>
+      <ul class="clean">
+        <li>Pon una reacción de 👍 (like) o ♥️ (corazoncito) al proyecto que más te gusto</li>
+        <li>Un voto por persona. No votes por tu propio equipo.</li>
+        <li>Piensen en: ¿sirve para algo?, ¿está bien explicado?, ¿es original?</li>
+        <li>El equipo más votado gana 1 punto extra por integrante si su notebook corre y esta bien implementado su pila o cola.</li>
+        <li>Si no cumple, gana el siguiente. Si hay empate, decide la profesora.</li>
+      </ul></div>
+  </div>
+</section>
+
+<section class="slide center" data-title="Reloj del reto">
+  <div class="head" style="align-items:center;text-align:center"><div class="eyebrow">Reto en marcha</div><h2>¡A programar!</h2></div>
+  <p class="timer" id="timer" aria-live="off">25:00</p>
+  <div class="timer-ctl">
+    <button class="nav primary" id="t-start" type="button">Iniciar</button>
+    <button class="nav" id="t-minus" type="button">− 1 min</button>
+    <button class="nav" id="t-plus" type="button">+ 1 min</button>
+    <button class="nav" id="t-reset" type="button">Reiniciar</button>
+  </div>
+  <div class="alert" role="note" style="text-align:center">Antes de que acabe el tiempo: la liga y los nombres completos del equipo en el grupo de WhatsApp. Sin liga en el grupo, es 0.</div>
+</section>
+
+<section class="slide" data-title="Entrega por WhatsApp">
+  <div class="head"><div class="eyebrow">Entrega</div><h2>Cómo mandar su liga</h2></div>
+  <div class="row2">
+    <div class="card"><h3>1 · Compartan el notebook</h3>
+      <ol class="clean">
+        <li>En Colab, toquen <b>Compartir</b> (arriba a la derecha).</li>
+        <li>En <b>Acceso general</b>, elijan <b>Cualquier persona con el enlace</b>, como <b>Lector</b>. Así la pueden abrir la profesora y sus compañeros.</li>
+        <li>Toquen <b>Copiar vínculo</b>.</li>
+        <li>Ábranla desde otro celular del equipo para comprobar que abre.</li>
+      </ol></div>
+    <div class="card"><h3>2 · Mándenla al grupo</h3>
+      <p>Una sola persona por equipo, con este formato:</p>
+      <p class="mono" style="background:var(--paper);border:2px solid var(--rule);border-radius:10px;padding:12px 14px;font-size:clamp(15px,1.3vw,20px);overflow-wrap:anywhere">Equipo: [nombres completos]<br>Tema: [su tema]<br>[liga de Colab]</p>
+  </div>
+  <div class="alert" role="note">La hora de su mensaje en el grupo es su comprobante de entrega.</div>
+</section>
+
+
+</main>
+
+<!-- El simulador vive aquí y se mueve a la diapositiva interactiva que esté en pantalla -->
+<div id="sim-home" hidden>
+<div class="sim" id="sim">
+  <div class="main">
+    <div class="stage">
+      <section class="panel" id="panel-vida" aria-label="Pilas y colas en la vida real">
+        <div class="scene-row">
+          <div class="scene">
+            <div class="scene-title">Los platos de la cocina <small>Se ponen y se toman por arriba</small></div>
+            <div class="kitchen"><div class="dishes" id="dishes"></div><div class="counter"></div></div>
+          </div>
+          <div class="scene">
+            <div class="scene-title">La fila de la tortillería <small>Se entra al final y se atiende al frente</small></div>
+            <div class="street" id="street"></div>
+          </div>
+        </div>
+      </section>
+      <section class="panel cola" id="panel-cola" aria-label="La cola">
+        <div class="panel-head"><div class="panel-title">La cola <small>fila de la tortillería</small></div><span class="rule-pill">FIFO · sale el primero que entró</span></div>
+        <div class="queue-area">
+          <div class="queue-ends"><span class="door">← Sale por el frente: fila.pop(0)</span><span>Entra al final: fila.append()</span></div>
+          <div class="queue-track" id="queue"></div>
+        </div>
+        <div class="repr" id="repr-cola"></div>
+      </section>
+      <section class="panel pila" id="panel-pila" aria-label="La pila">
+        <div class="panel-head"><div class="panel-title">La pila <small>pila de platos</small></div><span class="rule-pill">LIFO · sale el último que entró</span></div>
+        <div class="tower-area">
+          <div class="tower-wrap"><div class="tower" id="tower"></div><div class="tower-base"></div></div>
+          <div class="tower-side"><span class="door">↑ Entra y sale por arriba: append() y pop()</span><span>Abajo queda el primero que entró: pila[0]</span></div>
+        </div>
+        <div class="repr" id="repr-pila"></div>
+      </section>
+    </div>
+    <div class="col">
+      <div class="console" id="console" aria-label="Consola de Python" aria-live="polite"></div>
+      <div class="story" id="story" aria-label="Qué ha pasado"></div>
+      <div class="note" id="note" aria-live="polite"></div>
+    </div>
+  </div>
+  <div class="controls">
+    <div class="add" id="ctl-vida">
+      <button class="btn primary" id="v-poner" type="button">Poner un plato</button>
+      <button class="btn" id="v-tomar" type="button">Tomar un plato</button>
+      <div class="sep"></div>
+      <button class="btn teal" id="v-llega" type="button">Llega un cliente</button>
+      <button class="btn" id="v-atender" type="button">Atender</button>
+      <button class="btn" id="v-reset" type="button">⟲ Reiniciar</button>
+    </div>
+    <div class="add" id="ctl-code">
+      <div class="add">
+        <label for="name">Nombre</label>
+        <input id="name" type="text" maxlength="12" autocomplete="off" placeholder="Diego">
+        <button class="btn primary" id="b-add" type="button">Agregar <span class="code">append()</span></button>
+        <button class="btn" id="b-llega" type="button">Llega alguien</button>
+      </div>
+      <div class="sep"></div>
+      <button class="btn teal" id="b-pop" type="button">Sacar</button>
+      <button class="btn" id="b-peek" type="button">Ver sin sacar</button>
+      <button class="btn" id="b-empty" type="button">¿Está vacía?</button>
+      <button class="btn" id="b-reset" type="button">⟲ Reiniciar</button>
+    </div>
+    <div class="spacer"></div>
+    <label class="toggle" for="quiz"><input id="quiz" type="checkbox"> ¿Quién sale?</label>
+  </div>
+  <div class="keys" id="keys-vida"><kbd>P</kbd> poner plato · <kbd>T</kbd> tomar plato · <kbd>L</kbd> llega un cliente · <kbd>S</kbd> atender · <kbd>R</kbd> reiniciar</div>
+  <div class="keys" id="keys-code"><kbd>A</kbd> llega alguien · <kbd>S</kbd> sacar · <kbd>V</kbd> ver sin sacar · <kbd>R</kbd> reiniciar · <kbd>Enter</kbd> en el cuadro de nombre: agregar</div>
+</div>
+</div>
+
+<div class="progress" id="progress" style="width:0"></div>
+<nav class="bar" aria-label="Navegación de la presentación">
+  <button class="nav" id="n-prev" type="button" aria-label="Diapositiva anterior">←<span class="hide-sm"> Anterior</span></button>
+  <div class="where"><b id="n-title"></b><span id="n-count"></span></div>
+  <button class="nav hide-sm" id="n-full" type="button">Pantalla completa (F)</button>
+  <button class="nav primary" id="n-next" type="button" aria-label="Diapositiva siguiente"><span class="hide-sm">Siguiente </span>→</button>
+</nav>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ===== Simulador ===== */
+  var NAMES = ["Diego", "Mar", "Leo", "Iván", "Paola", "Rocío", "Beto", "Nadia", "Toño", "Valeria", "Hugo", "Lupita"];
+  var SAMPLE = ["Ana", "Luis", "Sofía"];
+  var MAX = 8;
+  var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var DELAY = REDUCED ? 0 : 380;
+  var DISHES = [
+    { n: "azul", c: "#7FB2E5" }, { n: "rojo", c: "#E88A7A" }, { n: "verde", c: "#9CCB8C" }, { n: "amarillo", c: "#F2D06B" },
+    { n: "morado", c: "#B9A2DE" }, { n: "rosa", c: "#F1A9C6" }, { n: "naranja", c: "#F2B07A" }, { n: "gris", c: "#C3C8CC" }
+  ];
+  var SHIRTS = ["#7FB2E5", "#E88A7A", "#9CCB8C", "#F2D06B", "#B9A2DE", "#F1A9C6", "#F2B07A", "#C3C8CC"];
+
+  var mode = "vida";
+  var pila = [], fila = [], log = [];
+  var platos = [], clientes = [], story = [], dishIdx = 0, shirtIdx = 0, nameIdx = 0;
+  var vAdded = null, vLeaving = null, vPending = null;
+  var added = null, leaving = null, peeking = null, pending = false, busy = false;
+
+  var towerEl = $("tower"), queueEl = $("queue"), consoleEl = $("console"), noteEl = $("note");
+
+  function usesPila() { return mode === "pila" || mode === "comparar"; }
+  function usesCola() { return mode === "cola" || mode === "comparar"; }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function pyStr(s) { return "'" + s.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'"; }
+  function codeStr(s) { return '"' + s.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'; }
+  function repr(list) { return "[" + list.map(pyStr).join(", ") + "]"; }
+  function say(text, kind) { noteEl.className = "note" + (kind ? " " + kind : ""); noteEl.textContent = text; }
+  function inp(c) { log.push({ k: "in", t: c }); }
+  function out(t) { log.push({ k: "out", t: t }); }
+  function err(t) { log.push({ k: "err", t: t }); }
+  function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+
+  function renderConsole() {
+    var lastIn = -1;
+    for (var i = log.length - 1; i >= 0; i--) { if (log[i].k === "in") { lastIn = i; break; } }
+    var h = '<div class="lbl">Consola de Python</div>';
+    log.forEach(function (l, i) {
+      var mark = lastIn >= 0 && i >= lastIn ? " last" : "";
+      if (l.k === "in") h += '<div class="cl' + mark + '"><span class="pr">&gt;&gt;&gt; </span>' + esc(l.t) + "</div>";
+      else h += '<div class="cl ' + l.k + mark + '">' + esc(l.t) + "</div>";
+    });
+    consoleEl.innerHTML = h;
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function renderPila() {
+    if (!pila.length) towerEl.innerHTML = '<div class="empty-note">La pila está vacía: []</div>';
+    else towerEl.innerHTML = pila.map(function (v, i) {
+      var top = i === pila.length - 1;
+      var cls = "plate" + (top ? " top" : "");
+      if (top && added && added.pila) cls += " in-pila";
+      if (top && leaving && leaving.pila) cls += " out-pila";
+      if (top && peeking && peeking.pila) cls += " peek";
+      return '<div class="' + cls + '"><span class="idx">' + (top ? "[" + i + "] · [-1]" : "[" + i + "]") + "</span>" + esc(v) + "</div>";
+    }).join("");
+    $("repr-pila").innerHTML = "<b>pila</b> = " + esc(repr(pila)) + " &nbsp;·&nbsp; len(pila) = " + pila.length;
+  }
+
+  function renderCola() {
+    if (!fila.length) queueEl.innerHTML = '<div class="empty-note">La fila está vacía: []</div>';
+    else queueEl.innerHTML = fila.map(function (v, i) {
+      var front = i === 0, last = i === fila.length - 1;
+      var cls = "person" + (front ? " front" : "");
+      if (last && added && added.cola) cls += " in-cola";
+      if (front && leaving && leaving.cola) cls += " out-cola";
+      if (front && peeking && peeking.cola) cls += " peek";
+      return '<div class="' + cls + '"><span class="idx">[' + i + "]</span>" + esc(v) + "</div>";
+    }).join("");
+    $("repr-cola").innerHTML = "<b>fila</b> = " + esc(repr(fila)) + " &nbsp;·&nbsp; len(fila) = " + fila.length;
+  }
+
+  function renderVida() {
+    var dEl = $("dishes"), sEl = $("street");
+    if (!platos.length) dEl.innerHTML = '<div class="empty-note">No quedan platos</div>';
+    else dEl.innerHTML = platos.map(function (d, i) {
+      var top = i === platos.length - 1;
+      var cls = "dish" + (top && vAdded === "plato" ? " in-pila" : "") + (top && vLeaving === "plato" ? " out-pila" : "");
+      return '<div class="' + cls + '" style="background:' + d.c + ';color:#1D2B36">' + esc(d.n) + "</div>";
+    }).join("");
+    var h = '<div class="stand"><div class="awning"></div><div class="sign">Tortillería<br>Doña Lupe</div></div>';
+    if (!clientes.length) h += '<div class="empty-note">No hay nadie formado</div>';
+    else h += clientes.map(function (p, i) {
+      var first = i === 0, last = i === clientes.length - 1;
+      var cls = "cust" + (first ? " first" : "") + (last && vAdded === "cliente" ? " in-cola" : "") + (first && vLeaving === "cliente" ? " out-fade" : "");
+      return '<div class="' + cls + '"><div class="head"></div><div class="torso" style="background:' + p.c + '"></div><div class="tag">' + esc(p.n) + (first ? "<br>sigue" : "") + "</div></div>";
+    }).join("");
+    sEl.innerHTML = h;
+    var s = '<div class="lbl">Qué ha pasado</div><ol>';
+    story.forEach(function (t, i) { s += "<li" + (i === story.length - 1 ? ' class="last"' : "") + ">" + esc(t) + "</li>"; });
+    $("story").innerHTML = s + "</ol>";
+    $("story").scrollTop = $("story").scrollHeight;
+  }
+
+  function renderControls() {
+    var vida = mode === "vida";
+    $("panel-vida").hidden = !vida;
+    $("ctl-vida").hidden = !vida; $("keys-vida").hidden = !vida; $("story").hidden = !vida;
+    $("ctl-code").hidden = vida; $("keys-code").hidden = vida; $("console").hidden = vida;
+    $("v-poner").disabled = busy || platos.length >= MAX;
+    $("v-llega").disabled = busy || clientes.length >= MAX;
+    $("v-tomar").disabled = busy; $("v-atender").disabled = busy;
+    $("v-tomar").textContent = vPending === "plato" ? "Revelar qué plato sale" : "Tomar un plato";
+    $("v-atender").textContent = vPending === "cliente" ? "Revelar a quién atienden" : "Atender";
+    $("panel-pila").hidden = !usesPila();
+    $("panel-cola").hidden = !usesCola();
+    var pop = $("b-pop"), peek = $("b-peek"), empty = $("b-empty");
+    if (pending) pop.innerHTML = "Revelar quién sale";
+    else if (mode === "pila") pop.innerHTML = 'Sacar <span class="code">pila.pop()</span>';
+    else if (mode === "cola") pop.innerHTML = 'Atender <span class="code">fila.pop(0)</span>';
+    else pop.innerHTML = "Sacar de las dos";
+    if (mode === "pila") peek.innerHTML = 'Ver el de arriba <span class="code">pila[-1]</span>';
+    else if (mode === "cola") peek.innerHTML = 'Ver quién sigue <span class="code">fila[0]</span>';
+    else peek.innerHTML = "Ver quién saldría";
+    if (mode === "pila") empty.innerHTML = '¿Vacía? <span class="code">len(pila) == 0</span>';
+    else if (mode === "cola") empty.innerHTML = '¿Vacía? <span class="code">len(fila) == 0</span>';
+    else empty.innerHTML = "¿Están vacías?";
+    var full = (usesPila() && pila.length >= MAX) || (usesCola() && fila.length >= MAX);
+    $("b-add").disabled = busy || full; $("b-llega").disabled = busy || full;
+    pop.disabled = busy; peek.disabled = busy; empty.disabled = busy;
+  }
+
+  function render() { renderVida(); renderPila(); renderCola(); renderConsole(); renderControls(); }
+  function clearMarks() { added = null; peeking = null; }
+
+  function vPoner() {
+    if (busy || platos.length >= MAX) return;
+    var d = DISHES[dishIdx % DISHES.length]; dishIdx++;
+    vPending = null; vAdded = "plato"; platos.push(d);
+    story.push("Pusiste el plato " + d.n + " arriba.");
+    say("Lavaste el plato " + d.n + " y lo pusiste arriba de la pila. Es el que tomarías primero.");
+    render();
+  }
+  function vTomar() {
+    if (busy) return;
+    vAdded = null;
+    if (!platos.length) { story.push("Quisiste tomar un plato, pero no había."); say("Ya no hay platos. No puedes tomar de una pila vacía.", "bad"); render(); return; }
+    if ($("quiz").checked && vPending !== "plato") { vPending = "plato"; say("Antes de tomarlo: ¿qué plato sale? Díganlo en voz alta.", "ask"); render(); return; }
+    vPending = null;
+    var d = platos[platos.length - 1];
+    story.push("Tomaste el plato " + d.n + ".");
+    say("Tomaste el plato " + d.n + ": el de arriba, el último que pusiste. Para sacar el de abajo tendrías que mover todos los demás.");
+    vLeaving = "plato"; busy = true; render();
+    setTimeout(function () { platos.pop(); vLeaving = null; busy = false; render(); }, DELAY);
+  }
+  function vLlega() {
+    if (busy || clientes.length >= MAX) return;
+    var n = NAMES[nameIdx % NAMES.length]; nameIdx++;
+    var c = SHIRTS[shirtIdx % SHIRTS.length]; shirtIdx++;
+    vPending = null; vAdded = "cliente"; clientes.push({ n: n, c: c });
+    story.push(n + " llegó y se formó al final.");
+    say(n + " llegó a la tortillería y se formó al final. No se mete adelante: espera a los " + (clientes.length - 1) + " que llegaron antes.");
+    render();
+  }
+  function vAtender() {
+    if (busy) return;
+    vAdded = null;
+    if (!clientes.length) { story.push("Doña Lupe quiso atender, pero no había nadie."); say("No hay nadie formado. No se puede atender a una fila vacía.", "bad"); render(); return; }
+    if ($("quiz").checked && vPending !== "cliente") { vPending = "cliente"; say("Antes de atender: ¿a quién le toca? Díganlo en voz alta.", "ask"); render(); return; }
+    vPending = null;
+    var p = clientes[0];
+    story.push("Atendieron a " + p.n + ".");
+    say("Atendieron a " + p.n + ": llegó primero, así que pasa primero. Los demás avanzan un lugar.");
+    vLeaving = "cliente"; busy = true; render();
+    setTimeout(function () { clientes.shift(); vLeaving = null; busy = false; render(); }, DELAY);
+  }
+
+  function add(raw) {
+    if (busy) return;
+    var name = String(raw || "").trim().slice(0, 12);
+    if (!name) { say("Escribe un nombre en el cuadro o usa Llega alguien.", "bad"); $("name").focus(); return; }
+    if ((usesPila() && pila.length >= MAX) || (usesCola() && fila.length >= MAX)) {
+      say("En Python no hay límite; aquí cabemos " + MAX + " para que se vea en el proyector. Saca a alguien primero.", "bad"); return;
+    }
+    clearMarks(); pending = false;
+    added = { pila: usesPila(), cola: usesCola() };
+    if (usesPila()) { pila.push(name); inp("pila.append(" + codeStr(name) + ")"); }
+    if (usesCola()) { fila.push(name); inp("fila.append(" + codeStr(name) + ")"); }
+    if (mode === "pila") say(name + " entra arriba de la pila. Ahora es el primero que saldría.");
+    else if (mode === "cola") say(name + " se forma al final de la fila. Saldrá después de los " + (fila.length - 1) + " que ya estaban.");
+    else say("El mismo append en las dos: " + name + " queda arriba de la pila y al final de la fila.");
+    render();
+  }
+
+  function sacar() {
+    if (busy) return;
+    if ($("quiz").checked && !pending) {
+      if ((usesPila() && pila.length) || (usesCola() && fila.length)) {
+        clearMarks(); pending = true;
+        say(mode === "comparar" ? "Antes de revelar: ¿quién sale de la pila y quién de la fila? Díganlo en voz alta." : "Antes de revelar: ¿quién sale? Díganlo en voz alta.", "ask");
+        render(); return;
+      }
+    }
+    pending = false; clearMarks();
+    var outP = null, outC = null, errs = 0;
+    if (usesPila()) { inp("pila.pop()"); if (pila.length) { outP = pila[pila.length - 1]; out(pyStr(outP)); } else { err("IndexError: pop from empty list"); errs++; } }
+    if (usesCola()) { inp("fila.pop(0)"); if (fila.length) { outC = fila[0]; out(pyStr(outC)); } else { err("IndexError: pop from empty list"); errs++; } }
+    if (errs && outP === null && outC === null) {
+      say("Error: la lista está vacía y no hay nada que sacar. Por eso deshacer() y atender() revisan len(lista) == 0 antes de sacar.", "bad");
+      render(); return;
+    }
+    if (mode === "pila") say("Sale " + outP + ": era el último que entró, el de arriba.");
+    else if (mode === "cola") say("Sale " + outC + ": era el primero de la fila.");
+    else if (outP !== null && outC !== null) say(outP === outC ? "Con un solo elemento, pop() y pop(0) sacan lo mismo: " + outP + "." : "Misma lista, distinto número: pop() saca a " + outP + " y pop(0) saca a " + outC + ".");
+    else say("Una de las dos ya estaba vacía. Mira el error en la consola.", "bad");
+    leaving = { pila: outP !== null, cola: outC !== null };
+    busy = true; render();
+    setTimeout(function () {
+      if (leaving.pila) pila.pop();
+      if (leaving.cola) fila.shift();
+      leaving = null; busy = false; render();
+    }, DELAY);
+  }
+
+  function verSinSacar() {
+    if (busy) return;
+    pending = false; clearMarks();
+    peeking = { pila: false, cola: false };
+    var parts = [];
+    if (usesPila()) { inp("pila[-1]"); if (pila.length) { out(pyStr(pila[pila.length - 1])); peeking.pila = true; parts.push("arriba de la pila está " + pila[pila.length - 1]); } else { err("IndexError: list index out of range"); parts.push("la pila está vacía"); } }
+    if (usesCola()) { inp("fila[0]"); if (fila.length) { out(pyStr(fila[0])); peeking.cola = true; parts.push("sigue " + fila[0] + " en la fila"); } else { err("IndexError: list index out of range"); parts.push("la fila está vacía"); } }
+    say(cap(parts.join(" y ")) + ". Solo se mira: nadie sale y len() no cambia.", (peeking.pila || peeking.cola) ? "" : "bad");
+    render();
+  }
+
+  function vacia() {
+    if (busy) return;
+    pending = false; clearMarks();
+    var bits = [];
+    if (usesPila()) { inp("len(pila) == 0"); out(pila.length === 0 ? "True" : "False"); bits.push("la pila tiene " + pila.length); }
+    if (usesCola()) { inp("len(fila) == 0"); out(fila.length === 0 ? "True" : "False"); bits.push("la fila tiene " + fila.length); }
+    say(cap(bits.join(" y ")) + ". Esta es la pregunta que se hace antes de sacar, para no provocar un IndexError.");
+    render();
+  }
+
+  function reset() {
+    pila = []; fila = []; log = []; pending = false; busy = false; leaving = null; clearMarks(); nameIdx = 0;
+    if (mode === "vida") {
+      platos = DISHES.slice(0, 3); dishIdx = 3;
+      clientes = [{ n: "Ana", c: SHIRTS[0] }, { n: "Luis", c: SHIRTS[1] }, { n: "Sofía", c: SHIRTS[2] }]; shirtIdx = 3;
+      story = ["Pusiste los platos azul, rojo y verde, en ese orden.", "Llegaron Ana, Luis y Sofía, en ese orden."];
+      vAdded = null; vLeaving = null; vPending = null;
+      say("¿Qué plato tomarías primero? ¿A quién atiende primero Doña Lupe? Respondan antes de presionar.");
+      render(); return;
+    }
+    SAMPLE.forEach(function (n) {
+      if (usesPila()) { pila.push(n); inp("pila.append(" + codeStr(n) + ")"); }
+      if (usesCola()) { fila.push(n); inp("fila.append(" + codeStr(n) + ")"); }
+    });
+    if (mode === "pila") say("Llegaron Ana, Luis y Sofía, en ese orden. ¿Quién saldría primero de la pila?");
+    else if (mode === "cola") say("Llegaron Ana, Luis y Sofía, en ese orden. ¿A quién atienden primero?");
+    else say("Las dos recibieron lo mismo: Ana, Luis y Sofía. Presiona Sacar de las dos y compara.");
+    render();
+  }
+  function setMode(m) { if (m !== mode) { mode = m; reset(); } }
+  function llega() { var n = NAMES[nameIdx % NAMES.length]; nameIdx++; add(n); }
+
+  $("v-poner").addEventListener("click", vPoner);
+  $("v-tomar").addEventListener("click", vTomar);
+  $("v-llega").addEventListener("click", vLlega);
+  $("v-atender").addEventListener("click", vAtender);
+  $("v-reset").addEventListener("click", reset);
+  $("b-add").addEventListener("click", function () { add($("name").value); $("name").value = ""; });
+  $("name").addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); add($("name").value); $("name").value = ""; } });
+  $("b-llega").addEventListener("click", llega);
+  $("b-pop").addEventListener("click", sacar);
+  $("b-peek").addEventListener("click", verSinSacar);
+  $("b-empty").addEventListener("click", vacia);
+  $("b-reset").addEventListener("click", reset);
+  $("quiz").addEventListener("change", function () { if (!$("quiz").checked && (pending || vPending)) { pending = false; vPending = null; say("Modo ¿Quién sale? apagado."); render(); } });
+
+  /* ===== Presentación ===== */
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var cur = 0;
+  var simEl = $("sim"), deckEl = $("deck");
+
+  function go(i) {
+    i = Math.max(0, Math.min(slides.length - 1, i));
+    slides[cur].classList.remove("on");
+    cur = i;
+    var s = slides[cur];
+    s.classList.add("on");
+    var m = s.getAttribute("data-sim");
+    if (m) { s.querySelector(".sim-slot").appendChild(simEl); setMode(m); }
+    deckEl.scrollTop = 0;
+    $("n-title").textContent = s.getAttribute("data-title") || "";
+    $("n-count").textContent = (cur + 1) + " de " + slides.length;
+    $("progress").style.width = ((cur + 1) / slides.length * 100) + "%";
+    $("n-prev").disabled = cur === 0;
+    $("n-next").disabled = cur === slides.length - 1;
+    try { localStorage.setItem("pyc-slide2", String(cur)); } catch (e) {}
+  }
+  function toggleFull() {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else if (document.documentElement.requestFullscreen) { var p = document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(function () {}); }
+    } catch (e) {}
+  }
+
+  $("n-prev").addEventListener("click", function () { go(cur - 1); });
+  $("n-next").addEventListener("click", function () { go(cur + 1); });
+  $("n-full").addEventListener("click", toggleFull);
+
+  /* ===== Reto: copiar prompt, reloj y votación ===== */
+
+  var TOTAL = 25 * 60, left = TOTAL, tick = null;
+  function drawTimer() {
+    var m = Math.floor(left / 60), s = left % 60, el = $("timer");
+    el.textContent = left > 0 ? (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s : "¡Tiempo!";
+    el.className = "timer" + (left === 0 ? " done" : left <= 120 ? " low" : "");
+  }
+  function stopTimer() { if (tick) { clearInterval(tick); tick = null; } $("t-start").textContent = left > 0 ? "Iniciar" : "Iniciar"; }
+  $("t-start").addEventListener("click", function () {
+    if (tick) { stopTimer(); $("t-start").textContent = "Continuar"; return; }
+    if (left === 0) left = TOTAL;
+    $("t-start").textContent = "Pausar";
+    tick = setInterval(function () { left = Math.max(0, left - 1); drawTimer(); if (left === 0) stopTimer(); }, 1000);
+    drawTimer();
+  });
+  $("t-minus").addEventListener("click", function () { left = Math.max(0, left - 60); drawTimer(); });
+  $("t-plus").addEventListener("click", function () { left = left + 60; drawTimer(); });
+  $("t-reset").addEventListener("click", function () { stopTimer(); left = TOTAL; drawTimer(); });
+  drawTimer();
+
+
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest && ev.target.closest("[data-reveal]");
+    if (!b) return;
+    b.getAttribute("data-reveal").split(" ").forEach(function (id) { var el = $(id); if (el) el.hidden = false; });
+    b.hidden = true;
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    var tag = (ev.target.tagName || "").toLowerCase();
+    if (tag === "input" || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var k = ev.key, lk = k.length === 1 ? k.toLowerCase() : k;
+    if (k === "ArrowRight" || k === "PageDown" || k === "ArrowDown") { ev.preventDefault(); go(cur + 1); return; }
+    if (k === "ArrowLeft" || k === "PageUp" || k === "ArrowUp") { ev.preventDefault(); go(cur - 1); return; }
+    if (k === "Home") { ev.preventDefault(); go(0); return; }
+    if (k === "End") { ev.preventDefault(); go(slides.length - 1); return; }
+    if (lk === "f") { ev.preventDefault(); toggleFull(); return; }
+    if (!slides[cur].getAttribute("data-sim")) return;
+    if (mode === "vida") {
+      if (lk === "p") { ev.preventDefault(); vPoner(); }
+      else if (lk === "t") { ev.preventDefault(); vTomar(); }
+      else if (lk === "l") { ev.preventDefault(); vLlega(); }
+      else if (lk === "s") { ev.preventDefault(); vAtender(); }
+      else if (lk === "r") { ev.preventDefault(); reset(); }
+      return;
+    }
+    if (lk === "a") { ev.preventDefault(); llega(); }
+    else if (lk === "s") { ev.preventDefault(); sacar(); }
+    else if (lk === "v") { ev.preventDefault(); verSinSacar(); }
+    else if (lk === "r") { ev.preventDefault(); reset(); }
+  });
+
+  reset();
+  var start = 0;
+  try { var saved = parseInt(localStorage.getItem("pyc-slide2"), 10); if (saved >= 0 && saved < slides.length) start = saved; } catch (e) {}
+  slides[0].classList.add("on");
+  go(start);
+})();
+</script>
+
+</body></html>
